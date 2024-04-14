@@ -1,0 +1,12 @@
+{
+    "extends": [
+        "next/core-web-vitals",
+        "prettier",
+        "plugin:@typescript-eslint/recommended",
+        "eslint:recommended",
+        "plugin:@typescript-eslint/stylistic"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "root": true,
+    "plugins": ["@typescript-eslint"]
+}
