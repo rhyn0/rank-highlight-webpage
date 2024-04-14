@@ -1,0 +1,45 @@
+name: CI / React
+
+on:
+    push:
+
+env:
+    HUSKY: 0
+
+jobs:
+    commit-checks:
+        runs-on: ubuntu-latest
+        name: pre-commit-js
+        steps:
+            - name: Checkout code
+              uses: action/checkout@v2
+
+            - name: Setup NodeJS
+              uses: actions/setup-node@v4.0.2
+              with:
+                  node-version-file: ".nvmrc"
+
+            - name: Cache npm dependencies
+              uses: actions/cache@v2
+              with:
+                  path: ~/.npm
+                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run lint
+              run: npm run lint --quiet
+
+            - name: Run type checks
+              run: npm run lint:types
+
+            - name: Check for any diffs
+              run: git diff --exit-code
+
+            - name: Comment on Summary if Failure
+              if: ${{ failure() }}
+              run: |
+                  echo "Lint checks failed. Please review and fix the issues." | tee -a ${GITHUB_STEP_SUMMARY}
