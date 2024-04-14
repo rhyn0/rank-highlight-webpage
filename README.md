@@ -6,13 +6,30 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
-First, run the development server:
+First, run the backend:
+
+```bash
+docker compose up --build --detach
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+### Cleanup the Running
+
+`Ctrl + C` will end the development server. But to end the backend databases, we have to send a custom Docker command:
+
+```bash
+docker kill docker-redis-1 docker-postgres-1
+docker rm $(docker ps -aq) # remove the container images from local machine
+```
+
+The names might be slightly different if you don't clean up often.
 
 ## Code
 
