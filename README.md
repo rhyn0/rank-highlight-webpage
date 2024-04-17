@@ -4,6 +4,8 @@ Exploration of using PostgreSQL and Redis to do vector searches to rank and high
 
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
+This project was deployed as a hobby project on [Vercel](https://vercel.com/). Check it out at the link [https://vercel.com/](https://rank-highlight-webpage.vercel.app/)
+
 ## Getting Started
 
 First, run the backend:
