@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
     const { setTheme, theme } = useTheme();
-
     return (
         <Button
             variant="ghost"

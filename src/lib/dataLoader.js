@@ -10,6 +10,7 @@ const { Client } = require("pg");
 const tableFilePath = "../../champs-table.html";
 const redisClientPromise = createClient({
     url: process.env.REDIS_URL,
+    database: 1,
 })
     .on("error", (err) => console.error(err))
     .connect();
@@ -55,11 +56,12 @@ async function storeDataRedis(data) {
     const redisClient = await redisClientPromise;
     for (const champion of data) {
         const { name } = champion;
+        const upperName = name.toUpperCase();
         const champTerms = [];
-        for (let i = 0; i < name.length; i++) {
-            champTerms.push({ score: 0, value: name.substring(0, i) });
+        for (let i = 0; i < upperName.length; i++) {
+            champTerms.push({ score: 0, value: upperName.substring(0, i) });
         }
-        champTerms.push({ score: 0, value: name + "*" });
+        champTerms.push({ score: 0, value: upperName + "*" });
         const populateDb = async () => {
             await redisClient.zAdd("champTerms", champTerms);
         };
@@ -82,8 +84,12 @@ async function storeDataPg(data) {
     }
 }
 async function storeData(data) {
-    storeDataPg(data);
-    storeDataRedis(data);
+    const upperData = data.map((champ) => ({
+        name: champ.name.toUpperCase(),
+        ...champ,
+    }));
+    storeDataPg(upperData);
+    storeDataRedis(upperData);
 }
 
 async function main() {
