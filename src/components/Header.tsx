@@ -17,7 +17,7 @@ export function Header({ className }: HeaderProps) {
                         href="/"
                         scroll
                     >
-                        Title
+                        Text Search
                     </Link>
                 </div>
                 <div className="flex flex-1 md:justify-end">
