@@ -4,19 +4,10 @@ const { parse } = require("node-html-parser");
 // @ts-expect-error - JS require for a script
 const { existsSync, readFileSync, writeFileSync } = require("fs");
 // @ts-expect-error - JS require for a script
-const { createClient } = require("redis");
-const { Client } = require("pg");
+const { sql } = require("@vercel/postgres");
+const { createClient } = require("@vercel/kv");
 
-const tableFilePath = "../../champs-table.html";
-const redisClientPromise = createClient({
-    url: process.env.REDIS_URL,
-    database: 1,
-})
-    .on("error", (err) => console.error(err))
-    .connect();
-const pgClient = new Client({
-    connectionString: process.env.PG_URL,
-});
+const tableFilePath = "champs-table.html";
 
 async function getTableData() {
     // dont repeatedly crawl the table
@@ -53,34 +44,31 @@ async function pullChampsData() {
 }
 
 async function storeDataRedis(data) {
-    const redisClient = await redisClientPromise;
+    const kv = createClient({
+        url: process.env.REDIS_REST_API_URL,
+        token: process.env.REDIS_REST_API_TOKEN,
+    });
     for (const champion of data) {
         const { name } = champion;
         const upperName = name.toUpperCase();
         const champTerms = [];
         for (let i = 0; i < upperName.length; i++) {
-            champTerms.push({ score: 0, value: upperName.substring(0, i) });
+            champTerms.push({ score: 0, member: upperName.substring(0, i) });
         }
-        champTerms.push({ score: 0, value: upperName + "*" });
+        champTerms.push({ score: 0, member: upperName + "*" });
         const populateDb = async () => {
-            await redisClient.zAdd("champTerms", champTerms);
+            await kv.zadd("champTerms", ...champTerms);
         };
 
         populateDb();
     }
 }
 async function storeDataPg(data) {
-    await pgClient.connect();
-    await pgClient.query(
-        "CREATE TABLE IF NOT EXISTS champions(id SERIAL PRIMARY KEY, name TEXT NOT NULL, release_date DATE NOT NULL, vector TSVECTOR NOT NULL);",
-    );
+    await sql`CREATE TABLE IF NOT EXISTS champions(id SERIAL PRIMARY KEY, name TEXT NOT NULL, release_date DATE NOT NULL, vector TSVECTOR NOT NULL);`;
     for (const champion of data) {
         const { name, releaseDate } = champion;
-        await pgClient.query(
-            "INSERT INTO champions(name, release_date, vector) \
-             VALUES ($1::text, $2::date, setweight(to_tsvector($1::text), 'A') || setweight(to_tsvector($2::text), 'B'));",
-            [name, releaseDate],
-        );
+        await sql`INSERT INTO champions(name, release_date, vector) \
+             VALUES (${name}::text, ${releaseDate}::date, setweight(to_tsvector(${name}::text), 'A') || setweight(to_tsvector(${releaseDate}::text), 'B'));`;
     }
 }
 async function storeData(data) {
@@ -94,6 +82,7 @@ async function storeData(data) {
 
 async function main() {
     const champArray = await pullChampsData();
+    console.table(champArray);
     await storeData(champArray);
 }
 main().then(() => {

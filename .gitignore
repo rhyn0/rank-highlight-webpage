@@ -110,4 +110,4 @@ sketch
 
 .env*
 !.env*.template
-champ-page.html
+champs-table.html

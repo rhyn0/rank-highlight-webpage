@@ -1,11 +1,8 @@
 import { ChampionResult, EngineChoice } from "@/app/types";
-import redisPromise from "@/lib/redisClient";
 import { NextRequest, NextResponse } from "next/server";
-import { Client } from "pg";
-
-const client = new Client({
-    connectionString: process.env.PG_URL,
-});
+import { sql } from "@vercel/postgres";
+// used custom prefix for KV
+import { createClient } from "@vercel/kv";
 
 const MAX_RESULTS = 20;
 
@@ -39,12 +36,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 async function redisQuery(query: string): Promise<ChampionResult[]> {
-    const client = await redisPromise;
-    const closestRank = await client.zRank("champTerms", query);
+    const redisUrl = process.env.REDIS_REST_API_URL;
+    const redisToken = process.env.REDIS_REST_API_TOKEN;
+    if (!redisUrl || !redisToken) {
+        console.error("Redis not set");
+        return [];
+    }
+    const kv = createClient({
+        url: process.env.REDIS_REST_API_URL as string,
+        token: process.env.REDIS_REST_API_TOKEN as string,
+    });
+    const closestRank = await kv.zrank("champTerms", query);
 
     if (!closestRank) return [];
 
-    const tempResults = await client.zRange(
+    const tempResults = await kv.zrange<string[]>(
         "champTerms",
         closestRank,
         closestRank + MAX_RESULTS,
@@ -64,16 +70,9 @@ async function redisQuery(query: string): Promise<ChampionResult[]> {
     return res;
 }
 async function pgQuery(query: string): Promise<ChampionResult[]> {
-    try {
-        await client.connect();
-    } catch (e) {
-        // console.log("client already connected");
-    }
     const prefixed = `${query}:*`;
-    const result = await client.query(
-        "SELECT name from champions where champions.vector @@ to_tsquery($1) LIMIT 20;",
-        [prefixed],
-    );
+    const result =
+        await sql`SELECT name from champions where champions.vector @@ to_tsquery(${prefixed}) LIMIT 20;`;
 
-    return result.rows;
+    return result.rows as ChampionResult[];
 }
